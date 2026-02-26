@@ -3,9 +3,6 @@ package br.com.dio.model;
 import java.util.Collection;
 import java.util.List;
 
-import static br.com.dio.model.GameStatusEnum.COMPLETE;
-import static br.com.dio.model.GameStatusEnum.INCOMPLETE;
-import static br.com.dio.model.GameStatusEnum.NON_STARTED;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -21,49 +18,60 @@ public class Board {
         return spaces;
     }
 
-    public GameStatusEnum getStatus(){
-        if (spaces.stream().flatMap(Collection::stream).noneMatch(s -> !s.isFixed() && nonNull(s.getActual()))){
-            return NON_STARTED;
+    // Status do jogo
+    public GameStatusEnum getStatus() {
+        boolean anyFilled = spaces.stream()
+                .flatMap(Collection::stream)
+                .anyMatch(s -> nonNull(s.getActual()) && !s.isFixed());
+
+        if (!anyFilled) {
+            return GameStatusEnum.NON_STARTED;
         }
 
-        return spaces.stream().flatMap(Collection::stream).anyMatch(s -> isNull(s.getActual())) ? INCOMPLETE : COMPLETE;
+        boolean anyEmpty = spaces.stream()
+                .flatMap(Collection::stream)
+                .anyMatch(Space::isEmpty);
+
+        return anyEmpty ? GameStatusEnum.INCOMPLETE : GameStatusEnum.COMPLETE;
     }
 
-    public boolean hasErrors(){
-        if(getStatus() == NON_STARTED){
+    // Checa se existe algum erro
+    public boolean hasErrors() {
+        if (getStatus() == GameStatusEnum.NON_STARTED) {
             return false;
         }
-
-        return spaces.stream().flatMap(Collection::stream)
-                .anyMatch(s -> nonNull(s.getActual()) && !s.getActual().equals(s.getExpected()));
+        return spaces.stream()
+                .flatMap(Collection::stream)
+                .anyMatch(Space::hasError);
     }
 
-    public boolean changeValue(final int col, final int row, final int value){
-        var space = spaces.get(col).get(row);
-        if (space.isFixed()){
+    // Alterar valor de uma célula
+    public boolean changeValue(final int col, final int row, final int value) {
+        Space space = spaces.get(col).get(row);
+        if (space.isFixed()) {
             return false;
         }
-
         space.setActual(value);
         return true;
     }
 
-    public boolean clearValue(final int col, final int row){
-        var space = spaces.get(col).get(row);
-        if (space.isFixed()){
+    // Limpar valor de uma célula
+    public boolean clearValue(final int col, final int row) {
+        Space space = spaces.get(col).get(row);
+        if (space.isFixed()) {
             return false;
         }
-
-        space.clearSpace();
+        space.clear();
         return true;
     }
 
-    public void reset(){
-        spaces.forEach(c -> c.forEach(Space::clearSpace));
+    // Resetar todo o tabuleiro
+    public void reset() {
+        spaces.forEach(column -> column.forEach(Space::clear));
     }
 
-    public boolean gameIsFinished(){
-        return !hasErrors() && getStatus().equals(COMPLETE);
+    // Verifica se o jogo terminou corretamente
+    public boolean gameIsFinished() {
+        return getStatus() == GameStatusEnum.COMPLETE && !hasErrors();
     }
-
 }
